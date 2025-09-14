@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.OrientationEventListener
 import android.view.View
@@ -213,6 +214,9 @@ class PlayerFragment : Fragment(), BackPressInterceptor {
         fullscreenSwitcher.setOnClickListener {
             toggleFullscreen()
         }
+
+        // Set up controller input handling for VR devices like Quest 3
+        setupControllerInputHandling()
     }
 
     override fun onStart() {
@@ -342,6 +346,163 @@ class PlayerFragment : Fragment(), BackPressInterceptor {
 
     fun onSkipToNext() {
         viewModel.skipToNext()
+    }
+
+    /**
+     * Set up controller input handling for VR devices and gamepads
+     */
+    private fun setupControllerInputHandling() {
+        // Enable focus for the player view to receive key events
+        playerView.isFocusable = true
+        playerView.isFocusableInTouchMode = true
+        playerView.requestFocus()
+
+        playerView.setOnKeyListener { _, keyCode, event ->
+            handleControllerKeyEvent(keyCode, event)
+        }
+    }
+
+    /**
+     * Handle controller input events from VR controllers, gamepads, etc.
+     */
+    private fun handleControllerKeyEvent(keyCode: Int, event: KeyEvent): Boolean {
+        // Only handle key down events to avoid duplicate actions
+        if (event.action != KeyEvent.ACTION_DOWN) {
+            return false
+        }
+
+        return when (keyCode) {
+            // Primary action buttons (A/X button, center button, or enter)
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_BUTTON_X,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_SPACE -> {
+                togglePlayPause()
+                true
+            }
+
+            // Quest 3 Controller triggers for seeking
+            KeyEvent.KEYCODE_BUTTON_R1,
+            KeyEvent.KEYCODE_BUTTON_R2 -> {
+                onFastForward()
+                true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_L1,
+            KeyEvent.KEYCODE_BUTTON_L2 -> {
+                onRewind()
+                true
+            }
+
+            // D-pad navigation
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                onRewind()
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                onFastForward()
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                onPreviousChapter()
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                onNextChapter()
+                true
+            }
+
+            // Menu/Back buttons
+            KeyEvent.KEYCODE_BUTTON_Y,
+            KeyEvent.KEYCODE_MENU -> {
+                toggleControllerVisibility()
+                true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BACK -> {
+                // Let the system handle back button
+                false
+            }
+
+            // Additional media keys
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                togglePlayPause()
+                true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                if (viewModel.playerState.value == Player.STATE_READY) {
+                    viewModel.play()
+                }
+                true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                if (viewModel.playerState.value == Player.STATE_READY) {
+                    viewModel.pause()
+                }
+                true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_NEXT -> {
+                onSkipToNext()
+                true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                onSkipToPrevious()
+                true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                onFastForward()
+                true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                onRewind()
+                true
+            }
+
+            else -> false
+        }
+    }
+
+    /**
+     * Toggle play/pause state
+     */
+    private fun togglePlayPause() {
+        when (viewModel.playerState.value) {
+            Player.STATE_READY -> {
+                val player = viewModel.player.value
+                if (player?.isPlaying == true) {
+                    viewModel.pause()
+                } else {
+                    viewModel.play()
+                }
+            }
+            Player.STATE_ENDED -> {
+                // Restart playback from beginning
+                viewModel.player.value?.seekTo(0)
+                viewModel.play()
+            }
+        }
+    }
+
+    /**
+     * Toggle controller visibility
+     */
+    private fun toggleControllerVisibility() {
+        if (playerView.isControllerFullyVisible) {
+            playerView.hideController()
+        } else {
+            playerView.showController()
+        }
     }
 
     fun onSkipMediaSegment(mediaSegmentDto: MediaSegmentDto?) {

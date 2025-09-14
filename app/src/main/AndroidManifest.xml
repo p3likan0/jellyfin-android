@@ -30,6 +30,10 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Gamepad/Controller support for VR devices like Quest 3 -->
+    <uses-feature android:name="android.hardware.gamepad" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />

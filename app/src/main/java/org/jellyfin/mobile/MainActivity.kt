@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.OrientationEventListener
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -204,5 +205,15 @@ class MainActivity : AppCompatActivity() {
         unbindService(serviceConnection)
         chromecast.destroy()
         super.onDestroy()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        // Forward controller input to PlayerFragment if it's visible
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+        if (currentFragment is PlayerFragment && currentFragment.isVisible) {
+            // Let PlayerFragment handle the key event
+            return super.onKeyDown(keyCode, event)
+        }
+        return super.onKeyDown(keyCode, event)
     }
 }
